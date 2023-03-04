@@ -1,0 +1,8 @@
+library WinjsFileSystem;
+
+uses
+  ChakraShell;
+
+exports GetJsValue;
+
+end.
