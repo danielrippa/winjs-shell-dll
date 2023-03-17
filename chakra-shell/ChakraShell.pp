@@ -10,7 +10,7 @@ interface
 
 implementation
 
-  uses Chakra, ChakraUtils, ChakraShellUtils, Variants;
+  uses Chakra, ChakraUtils, ChakraShellUtils, Variants, Win32Shell;
 
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -60,11 +60,38 @@ implementation
     Result := WScriptShellRun(Command, WaitOnReturn);
   end;
 
+  function ShellExecVerb(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    Verb: String;
+    FileName: String;
+    Parameters: String;
+    ClassName: String;
+    WorkingDirectory: String;
+    WindowState: Integer;
+    Flags: Integer;
+    Monitor: THandle;
+    WindowHandle: THandle;
+  begin
+    CheckParams('execVerb', Args, ArgCount, [jsString, jsString, jsString, jsString, jsNumber, jsNumber, jsNumber, jsNumber], 8);
+
+    Verb := JsStringAsString(Args^); Inc(Args);
+    FileName := JsStringAsString(Args^); Inc(Args);
+    Parameters := JsStringAsString(Args^); Inc(Args);
+    WorkingDirectory := JsStringAsString(Args^); Inc(Args);
+    WindowState := JsNumberAsInt(Args^); Inc(Args);
+    Flags := JsNumberAsInt(Args^); Inc(Args);
+    Monitor := THandle(JsNumberAsInt(Args^)); Inc(Args);
+    WindowHandle := THandle(JsNumberAsInt(Args^));
+
+    Result := BooleanAsJsBoolean(ShellExecuteVerb(Verb, FileName, Parameters, ClassName, WorkingDirectory, WindowState, Flags, Monitor, WindowHandle));
+  end;
+
   function GetJsValue;
   begin
     Result := CreateObject;
     SetFunction(Result, 'expandEnvVar', ShellExpandEnvVar);
     SetFunction(Result, 'exec', ShellExec);
+    SetFunction(Result, 'execVerb', ShellExecVerb);
     SetFunction(Result, 'run', ShellRun);
   end;
 
