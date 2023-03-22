@@ -10,7 +10,7 @@ interface
 
 implementation
 
-  uses Chakra, ChakraUtils, ChakraShellUtils, Variants, Win32Shell;
+  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32Shell, Win32Taskbar, ChakraShellUtils;
 
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -86,6 +86,50 @@ implementation
     Result := BooleanAsJsBoolean(ShellExecuteVerb(Verb, FileName, Parameters, ClassName, WorkingDirectory, WindowState, Flags, Monitor, WindowHandle));
   end;
 
+  function TaskbarIconSetProgressPercentage(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    Percentage: TTaskbarProgressPercentage;
+  begin
+    Result := Undefined;
+    CheckParams('setProgressPercentage', Args, ArgCount, [jsNumber], 1);
+
+    try
+      Percentage := JsNumberAsInt(Args^);
+    except
+      on E: Exception do begin
+        ThrowError(E.Message, []);
+      end;
+    end;
+
+    SetTaskbarProgressPercentage(Percentage);
+  end;
+
+  function TaskbarIconSetProgressState(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    State: TTaskbarProgressState;
+  begin
+    Result := Undefined;
+    CheckParams('setProgressState', Args, ArgCount, [jsNumber], 1);
+
+    try
+      State := TTaskbarProgressState(JsNumberAsInt(Args^));
+    except
+      on E: Exception do begin
+        ThrowError(E.Message, []);
+      end;
+    end;
+
+    SetTaskbarProgressState(State);
+  end;
+
+  function GetTaskbarIcon: TJsValue;
+  begin
+    Result := CreateObject;
+
+    SetFunction(Result, 'setProgressPercentage', TaskbarIconSetProgressPercentage);
+    SetFunction(Result, 'setProgressState', TaskbarIconSetProgressState);
+  end;
+
   function GetJsValue;
   begin
     Result := CreateObject;
@@ -93,6 +137,8 @@ implementation
     SetFunction(Result, 'exec', ShellExec);
     SetFunction(Result, 'execVerb', ShellExecVerb);
     SetFunction(Result, 'run', ShellRun);
+
+    SetProperty(Result, 'taskbarIcon', GetTaskbarIcon);
   end;
 
 end.
