@@ -10,7 +10,7 @@ interface
 
 implementation
 
-  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32Shell, Win32Taskbar, ChakraShellUtils;
+  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils;
 
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -24,22 +24,21 @@ implementation
   function ShellExec(Args: PJsValue; ArgCount: Word): TJsValue;
   var
     Executable, Params, WorkingFolder: WideString;
+    Priority, BufferSize: Integer;
+    OutputProc: TJsValue;
   begin
-   CheckParams('exec', Args, ArgCount, [jsString, jsString, jsString], 2);
+   CheckParams('exec', Args, ArgCount, [jsString, jsString, jsString, jsNumber, jsNumber, jsFunction], 6);
 
-    Executable := JsStringAsString(Args^);
-    Inc(Args);
+    Executable := JsStringAsString(Args^); Inc(Args);
+    Params := JsStringAsString(Args^); Inc(Args);
+    WorkingFolder := JsStringAsString(Args^); Inc(Args);
 
-    Params := JsStringAsString(Args^);
+    Priority := JsNumberAsInt(Args^); Inc(Args);
+    BufferSize := JsNumberAsInt(Args^); Inc(Args);
 
-    WorkingFolder := '';
+    OutputProc := Args^;
 
-    if ArgCount > 2 then begin
-      Inc(Args);
-      WorkingFolder := JsStringAsString(Args^);
-    end;
-
-    Result := ExecuteProcess(Executable, Params, WorkingFolder);
+    Result := ExecuteProcess(Executable, Params, WorkingFolder, Priority, BufferSize, OutputProc);
   end;
 
   function ShellRun(Args: PJsValue; ArgCount: Word): TJsValue;

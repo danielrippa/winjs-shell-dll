@@ -10,13 +10,13 @@ interface
 
   function ExpandEnvVar(EnvVarName: WideString): WideString;
 
-  function ExecuteProcess(Executable, Params, WorkingFolder: WideString): TJsValue;
+  function ExecuteProcess(Executable, Params, WorkingFolder: WideString; Priority, BufferSize: Integer; OutputProc: TJsValue): TJsValue;
 
   function WScriptShellRun(Command: WideString; WaitOnReturn: Boolean): TJsValue;
 
 implementation
 
-  uses Chakra, ComObj, ActiveX, SysUtils, Types, StrUtils, Process;
+  uses Chakra, ChakraErr, ComObj, ActiveX, SysUtils, Types, StrUtils, Process, Classes;
 
   function GetWScriptShell;
   begin
@@ -49,18 +49,66 @@ implementation
     Result := IntAsJsNumber(Shell.Run(Command, 0, WaitOnReturn));
   end;
 
-  type TUnicodeStringArray = array of UnicodeString;
-
-  function UnicodeSplit(Value: UnicodeString): TUnicodeStringArray;
+  procedure InvokeOutputCallback(aCallback: TJsValue; Output: String);
   var
-    Params: TStringDynArray;
-    I: Integer;
+    Args: Array of TJsValue;
+    ArgCount: Word;
   begin
-    Params := SplitString(Value, ' ');
-    SetLength(Result, Length(Params));
-    for I := 0 to Length(Params) do begin
-      Result[I] := Params[I];
+    ArgCount := 2;
+    Args := [ Undefined, StringAsJsString(Output) ];
+
+    CallFunction(aCallback, @Args[0], ArgCount);
+  end;
+
+  procedure EmitOutput(aStream: TStringStream; aBuffer: Pointer; aBytesRead: DWord; aOutputProc: TJsValue);
+  begin
+    with aStream do begin
+      Size := 0;
+      Write(aBuffer^, aBytesRead);
+
+      InvokeOutputCallback(aOutputProc, DataString);
     end;
+  end;
+
+  procedure EmitProcessOutput(aProcess: TProcess; aBufferSize: Integer; aOutputProc: TJsValue);
+  var
+    Stream: TStringStream;
+    Buffer: Pointer;
+    BytesRead: DWord;
+  begin
+
+    Stream := TStringStream.Create(EmptyStr);
+    GetMem(Buffer, aBufferSize);
+
+    try
+
+      aProcess.Execute;
+
+      while aProcess.Running and aProcess.Active do begin
+
+        BytesRead := aProcess.Output.Read(Buffer^, aBufferSize);
+        if BytesRead = 0 then begin
+          Sleep(10);
+        end else begin
+          EmitOutput(Stream, Buffer, BytesRead, aOutputProc);
+        end;
+
+      end;
+
+      repeat
+
+        BytesRead := aProcess.Output.Read(Buffer^, aBufferSize);
+        if BytesRead <> 0 then begin
+          EmitOutput(Stream, Buffer, BytesRead, aOutputProc);
+        end;
+
+      until BytesRead = 0;
+
+    finally
+      FreeMem(Buffer, aBufferSize);
+      Stream.Free;
+    end;
+
   end;
 
   type
@@ -68,35 +116,44 @@ implementation
     TProcessOutcome = record
       Stdout: String;
       StdErr: String;
-      Succeeded: Boolean;
       ExitStatus: Integer;
     end;
 
-  function ExecProcess(aExecutable, aParams: WideString; aWorkingFolder: WideString = ''): TProcessOutcome;
+  function ExecProcess(aExecutable, aParams, aWorkingFolder: WideString; aPriority, aBufferSize: Integer; aOutputProc: TJsValue): TProcessOutcome;
   var
     Process: TProcess;
-    Params: TUnicodeStringArray;
     I: Integer;
+    ProcessPriority: TProcessPriority;
   begin
 
-    Result.Succeeded := False;
+    try
+      ProcessPriority := TProcessPriority(aPriority);
+    except
+      on E: Exception do
+        ThrowError('Invalid Priority Value %d', [aPriority]);
+    end;
 
     try
 
       Process := TProcess.Create(Nil);
 
-      Params := UnicodeSplit(aParams);
-
       with Process do begin
         Executable := aExecutable;
         CurrentDirectory := aWorkingFolder;
-        for I := 0 to Length(Params) - 1 do begin
-          Parameters.Add(Params[I]);
+        Parameters.Add(aParams);
+        Priority := ProcessPriority;
+        if aBufferSize > 0 then begin
+          Options := [poUsePipes, poStdErrToOutput];
         end;
       end;
 
       with Result do begin
-        Succeeded := Process.RunCommandLoop(StdOut, StdErr, ExitStatus) = 0;
+        if aBufferSize > 0 then begin
+          EmitProcessOutput(Process, aBufferSize, aOutputProc);
+          ExitStatus := Process.ExitStatus;
+        end else begin
+          Process.RunCommandLoop(StdOut, StdErr, ExitStatus);
+        end;
       end;
 
     finally
@@ -108,10 +165,9 @@ implementation
   begin
     Result := CreateObject;
 
-    with ExecProcess(Executable, Params, WorkingFolder) do begin
+    with ExecProcess(Executable, Params, WorkingFolder, Priority, BufferSize, OutputProc) do begin
       SetProperty(Result, 'stdout', StringAsJsString(StdOut));
       SetProperty(Result, 'stderr', StringAsJsString(StdErr));
-      SetProperty(Result, 'succeeded', BooleanAsJsBoolean(Succeeded));
       SetProperty(Result, 'exitStatus', IntAsJsNumber(ExitStatus));
     end;
   end;
