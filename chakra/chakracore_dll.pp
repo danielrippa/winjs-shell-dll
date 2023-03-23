@@ -31,7 +31,7 @@ interface
   function JsCreateError(Message: TJsValue; out Error: TJsValue): TJsErrorCode; stdcall;
   function JsSetException(Error: TJsValue): TJsErrorCode; stdcall;
   function JsGetValueType(Value: TJsValue; out ValueType: TJsValueType): TJsErrorCode; stdcall;
-
+  function JsCallFunction(Func: TJsValue; Args: PJsValue; ArgCount: Word; out ResultValue: TJsValue): TJsErrorCode; stdcall;
 
 implementation
 
@@ -62,5 +62,6 @@ implementation
   function JsCreateError; external dll;
   function JsSetException; external dll;
   function JsGetValueType; external dll;
+  function JsCallFunction; external dll;
 
 end.

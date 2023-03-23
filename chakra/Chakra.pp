@@ -39,6 +39,8 @@ interface
 
   function GetValueType(Value: TJsValue): TJsValueType;
 
+  function CallFunction(Func: TJsValue; Args: PJsValue; ArgCount: Word): TJsValue;
+
 implementation
 
   uses ChakraErr, chakracore_dll;
@@ -220,6 +222,11 @@ implementation
   function GetValueType;
   begin
     TryChakraAPI('JsGetValueType', JsGetValueType(Value, Result));
+  end;
+
+  function CallFunction;
+  begin
+    TryChakraAPI('JsCallFunction', JsCallFunction(Func, Args, ArgCount, Result));
   end;
 
 end.
