@@ -1,4 +1,4 @@
-unit Win32Shell;
+unit Win32ShellExecute;
 
 {$mode delphi}
 
@@ -30,6 +30,10 @@ implementation
       nShow := aWindowState;
       lpClass := PChar(aClassName);
       DUMMYUNIONNAME.hMonitor := aMonitor;
+
+      // TODO: Implement more of SHELLEXECUTEINFOA
+      // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa
+
     end;
 
     Result := ShellExecuteExA(@ExecuteInfo);
