@@ -1,4 +1,4 @@
-library WinjsFileSystem;
+library WinjsShell;
 
 uses
   ChakraShell;
