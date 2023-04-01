@@ -10,7 +10,7 @@ interface
 
 implementation
 
-  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils;
+  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils, Win32FileDialogs;
 
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -129,15 +129,55 @@ implementation
     SetFunction(Result, 'setProgressState', TaskbarIconSetProgressState);
   end;
 
+  function ShellFileOpenDialog(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    aFileName, aDefaultExtension, aFilter, aInitialFolder, aTitle: WideString;
+    aFilterIndex: Integer;
+  begin
+    CheckParams('fileOpenDialog', Args, ArgCount, [jsString, jsString, jsString, jsString, jsString, jsNumber], 6);
+
+    aFileName := JsStringAsString(Args^); Inc(Args);
+    aDefaultExtension := JsStringAsString(Args^); Inc(Args);
+    aFilter := JsStringAsString(Args^); Inc(Args);
+    aInitialFolder := JsStringAsString(Args^); Inc(Args);
+    aTitle := JsStringAsString(Args^); Inc(Args);
+
+    aFilterIndex := JsNumberAsInt(Args^);
+
+    Result := StringAsJsString(FileOpenDialog(aFileName, aDefaultExtension, aFilter, aInitialFolder, aTitle, aFilterIndex));
+  end;
+
+  function ShellFileSaveDialog(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    aFileName, aDefaultExtension, aFilter, aInitialFolder, aTitle: WideString;
+    aFilterIndex: Integer;
+  begin
+    CheckParams('fileSaveDialog', Args, ArgCount, [jsString, jsString, jsString, jsString, jsString, jsNumber], 6);
+
+    aFileName := JsStringAsString(Args^); Inc(Args);
+    aDefaultExtension := JsStringAsString(Args^); Inc(Args);
+    aFilter := JsStringAsString(Args^); Inc(Args);
+    aInitialFolder := JsStringAsString(Args^); Inc(Args);
+    aTitle := JsStringAsString(Args^); Inc(Args);
+
+    aFilterIndex := JsNumberAsInt(Args^);
+
+    Result := StringAsJsString(FileSaveDialog(aFileName, aDefaultExtension, aFilter, aInitialFolder, aTitle, aFilterIndex));
+  end;
+
   function GetJsValue;
   begin
     Result := CreateObject;
     SetFunction(Result, 'expandEnvVar', ShellExpandEnvVar);
+
     SetFunction(Result, 'exec', ShellExec);
     SetFunction(Result, 'execVerb', ShellExecVerb);
     SetFunction(Result, 'run', ShellRun);
 
     SetProperty(Result, 'taskbarIcon', GetTaskbarIcon);
+
+    SetFunction(Result, 'fileOpenDialog', ShellFileOpenDialog);
+    SetFunction(Result, 'fileSaveDialog', ShellFileSaveDialog);
   end;
 
 end.
