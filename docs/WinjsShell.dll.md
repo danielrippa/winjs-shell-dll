@@ -1,22 +1,21 @@
-# WinjsWeb.dll
+# WinjShell.dll
 
 ```
 get-js-value: ->
 
-  get-connection-state: ->
-
-    connection-name: string
-    is-connected: boolean
-    is-configured: boolean
-    is-offline: boolean
-    is-proxy: boolean
-
-  get-content: (url: string) ->
-
-    status-code: number
-    response-string: string
-
-  get-file: (url: string, filename: string) -> number
+  expand-env-var: (var-name: string) -> string
+  exec: (executable: string, parameters: string, working-folder: string, priority: number, buffer-size: number, output-callback: function) ->
+  
+    stdout: string
+    stderr: string
+    exit-status: number
+    
+  exec-verb: (verb: string, filename: string, working-folder: string, window-state: number, flags: number, monitor: number, window-handle: number) ->
+  
+  taskbar-icon:
+    
+    set-progress-percentage: (percentage: number) -> void
+    set-progress-state: (state: number) -> void
   
   file-open-dialog: (filename: string, default-extension: string, filter: string, initial-folder: string, title: string, filter-index: number): string
   
