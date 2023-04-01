@@ -18,4 +18,8 @@ get-js-value: ->
 
   get-file: (url: string, filename: string) -> number
   
+  file-open-dialog: (filename: string, default-extension: string, filter: string, initial-folder: string, title: string, filter-index: number): string
+  
+  file-save-dialog: (filename: string, default-extension: string, filter: string, initial-folder: string, title: string, filter-index: number): string
+  
 ```
