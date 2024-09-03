@@ -12,6 +12,8 @@ interface
 
   function ExecuteProcess(Executable, Params, WorkingFolder: WideString; Priority, BufferSize: Integer; OutputProc: TJsValue): TJsValue;
 
+  function WScriptShellRun(Command: WideString; WaitOnReturn: Boolean): TJsValue;
+
 implementation
 
   uses Chakra, ChakraErr, ComObj, ActiveX, SysUtils, Types, StrUtils, Process, Classes;
@@ -160,6 +162,14 @@ implementation
       SetProperty(Result, 'stderr', StringAsJsString(StdErr));
       SetProperty(Result, 'exitStatus', IntAsJsNumber(ExitStatus));
     end;
+  end;
+
+  function WScriptShellRun;
+  var
+    Shell: OleVariant;
+  begin
+    Shell := GetWScriptShell();
+    Result := IntAsJsNumber(Shell.Run(Command, 0, WaitOnReturn));
   end;
 
 initialization
