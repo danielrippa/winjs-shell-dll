@@ -6,17 +6,20 @@ interface
 
   uses Variants, ChakraTypes;
 
+  type
+    WideStringArray = array of WideString;
+
   function GetWScriptShell: OleVariant;
 
   function ExpandEnvVar(EnvVarName: WideString): WideString;
 
-  function ExecuteProcess(Executable, Params, WorkingFolder: WideString; Priority, BufferSize: Integer; OutputProc: TJsValue): TJsValue;
+  function ExecuteProcess(Executable: WideString; Params: WideStringArray; WorkingFolder: WideString; Priority, BufferSize: Integer; OutputProc: TJsValue): TJsValue;
 
   function WScriptShellRun(Command: WideString; WaitOnReturn: Boolean): TJsValue;
 
 implementation
 
-  uses Chakra, ChakraErr, ComObj, ActiveX, SysUtils, Types, StrUtils, Process, Classes;
+  uses Chakra, ComObj, ActiveX, SysUtils, Types, StrUtils, Process, Classes, ChakraError;
 
   function GetWScriptShell;
   begin
@@ -111,7 +114,16 @@ implementation
       ExitStatus: Integer;
     end;
 
-  function ExecProcess(aExecutable, aParams, aWorkingFolder: WideString; aPriority, aBufferSize: Integer; aOutputProc: TJsValue): TProcessOutcome;
+  procedure AddParameters(aParams: WideStringArray; Parameters: TProcessStrings);
+  var
+    i: Integer;
+  begin
+    for i := 0 to Length(aParams) - 1 do begin
+      Parameters.Add(aParams[i]);
+    end;
+  end;
+
+  function ExecProcess(aExecutable: WideString; aParams: WideStringArray; aWorkingFolder: WideString; aPriority, aBufferSize: Integer; aOutputProc: TJsValue): TProcessOutcome;
   var
     Process: TProcess;
     I: Integer;
@@ -130,22 +142,26 @@ implementation
       Process := TProcess.Create(Nil);
 
       with Process do begin
+
         Executable := aExecutable;
+        AddParameters(aParams, Parameters);
         CurrentDirectory := aWorkingFolder;
-        Parameters.Add(aParams);
         Priority := ProcessPriority;
+
         if aBufferSize > 0 then begin
           Options := [poUsePipes, poStdErrToOutput];
         end;
       end;
 
       with Result do begin
+
         if aBufferSize > 0 then begin
           EmitProcessOutput(Process, aBufferSize, aOutputProc);
           ExitStatus := Process.ExitStatus;
         end else begin
           Process.RunCommandLoop(StdOut, StdErr, ExitStatus);
         end;
+
       end;
 
     finally

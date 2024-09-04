@@ -10,7 +10,7 @@ interface
 
 implementation
 
-  uses Chakra, ChakraUtils, ChakraErr, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils, Win32FileDialogs;
+  uses Chakra, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils, Win32FileDialogs, ChakraError;
 
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -21,16 +21,41 @@ implementation
     Result := StringAsJsString(ExpandEnvVar(EnvVarName));
   end;
 
+  function JsArrayAsWideStringArray(aArray: TJsValue): WideStringArray;
+  var
+    ArrayLength: Integer;
+    jsArrayLength: TJsValue;
+    i: Integer;
+    Item: TJsValue;
+  begin
+    Result := [];
+
+    ArrayLength := GetIntProperty(aArray, 'length');
+
+    if ArrayLength > 0 then begin
+
+      SetLength(Result, ArrayLength);
+
+      for i := 0 to ArrayLength - 1 do begin
+        Item := GetArrayItem(aArray, i);
+        Result[i] := JsValueAsString(Item);
+      end;
+
+    end;
+
+  end;
+
   function ShellExec(Args: PJsValue; ArgCount: Word): TJsValue;
   var
-    Executable, Params, WorkingFolder: WideString;
+    Executable, WorkingFolder: WideString;
+    Params: array of WideString;
     Priority, BufferSize: Integer;
     OutputProc: TJsValue;
   begin
-   CheckParams('exec', Args, ArgCount, [jsString, jsString, jsString, jsNumber, jsNumber, jsFunction], 6);
+    CheckParams('exec', Args, ArgCount, [jsString, jsArray, jsString, jsNumber, jsNumber, jsFunction], 6);
 
     Executable := JsStringAsString(Args^); Inc(Args);
-    Params := JsStringAsString(Args^); Inc(Args);
+    Params := JsArrayAsWideStringArray(Args^); Inc(Args);
     WorkingFolder := JsStringAsString(Args^); Inc(Args);
 
     Priority := JsNumberAsInt(Args^); Inc(Args);
