@@ -12,6 +12,15 @@ implementation
 
   uses Chakra, Variants, SysUtils, Win32ShellExecute, Win32Taskbar, ChakraShellUtils, Win32FileDialogs, ChakraError;
 
+  function ShellExpandEnvVarString(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    EnvVarString: WideString;
+  begin
+    CheckParams('expandEnvVarString', Args, ArgCount, [jsString], 1);
+    EnvVarString := JsStringAsString(Args^);
+    Result := StringAsJsString(ExpandEnvVarString(EnvVarString));
+  end;
+
   function ShellExpandEnvVar(Args: PJsValue; ArgCount: Word): TJsValue;
   var
     EnvVarName: WideString;
@@ -72,7 +81,7 @@ implementation
     WaitOnReturn: Boolean;
   begin
     WaitOnReturn := False;
-    CheckParams('exec', Args, ArgCount, [jsString, jsBoolean], 1);
+    CheckParams('run', Args, ArgCount, [jsString, jsBoolean], 1);
 
     Command := JsStringAsString(Args^);
 
@@ -190,12 +199,33 @@ implementation
     Result := StringAsJsString(FileSaveDialog(aFileName, aDefaultExtension, aFilter, aInitialFolder, aTitle, aFilterIndex));
   end;
 
+  function ShellStart(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    Executable, WorkingFolder: WideString;
+    Params: array of WideString;
+    Priority: Integer;
+    WaitOnReturn: Boolean;
+  begin
+    CheckParams('exec', Args, ArgCount, [jsString, jsArray, jsString, jsNumber, jsBoolean], 5);
+
+    Executable := JsStringAsString(Args^); Inc(Args);
+    Params := JsArrayAsWideStringArray(Args^); Inc(Args);
+    WorkingFolder := JsStringAsString(Args^); Inc(Args);
+
+    Priority := JsNumberAsInt(Args^); Inc(Args);
+    WaitOnReturn := JsBooleanAsBoolean(Args^);
+
+    Result := StartProcess(Executable, Params, WorkingFolder, Priority, WaitOnReturn);
+  end;
+
   function GetJsValue;
   begin
     Result := CreateObject;
     SetFunction(Result, 'expandEnvVar', ShellExpandEnvVar);
+    SetFunction(Result, 'expandEnvVarString', ShellExpandEnvVarString);
 
     SetFunction(Result, 'exec', ShellExec);
+    SetFunction(Result, 'start', ShellStart);
     SetFunction(Result, 'execVerb', ShellExecVerb);
     SetFunction(Result, 'run', ShellRun);
 

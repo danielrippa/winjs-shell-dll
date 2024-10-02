@@ -12,8 +12,11 @@ interface
   function GetWScriptShell: OleVariant;
 
   function ExpandEnvVar(EnvVarName: WideString): WideString;
+  function ExpandEnvVarString(EnvVarString: WideString): WideString;
 
   function ExecuteProcess(Executable: WideString; Params: WideStringArray; WorkingFolder: WideString; Priority, BufferSize: Integer; OutputProc: TJsValue): TJsValue;
+
+  function StartProcess(Executable: WideString, Params: WideStringArray; WorkingFolder: WideString; Priority: Integer; WaitOnReturn: Boolean): Integer;
 
   function WScriptShellRun(Command: WideString; WaitOnReturn: Boolean): TJsValue;
 
@@ -24,6 +27,14 @@ implementation
   function GetWScriptShell;
   begin
     Result := CreateOleObject('WScript.Shell');
+  end;
+
+  function ExpandEnvVarString;
+  var
+    Shell: OleVariant;
+  begin
+    Shell := GetWScriptShell();
+    Result := Shell.ExpandEnvironmentStrings(EnvVarString);
   end;
 
   function ExpandEnvVar;
@@ -186,6 +197,45 @@ implementation
   begin
     Shell := GetWScriptShell();
     Result := IntAsJsNumber(Shell.Run(Command, 0, WaitOnReturn));
+  end;
+
+  function StartProcess;
+  begin
+
+    Result := -1;
+
+    try
+      ProcessPriority := TProcessPriority(aPriority);
+    except
+      on E: Exception do
+        ThrowError('Invalid Priority Value %d', [aPriority]);
+    end;
+
+    try
+
+      Process := TProcess.Create(Nil);
+
+      with Process do begin
+
+        Executable := aExecutable;
+        AddParameters(aParams, Parameters);
+        CurrentDirectory := aWorkingFolder;
+        Priority := ProcessPriority;
+
+        Result := ProcessID;
+
+        if AWaitOnReturn then begin
+          Options := [poWaitOnExit];
+        end;
+
+        Execute;
+
+      end;
+
+    finally
+      Process.Free;
+    end;
+
   end;
 
 initialization
